@@ -1,0 +1,55 @@
+FROM php:7.4-cli
+
+# timezone
+ENV TZ=Asia/Ho_Chi_Minh
+
+# system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tini \
+    cron \
+    tzdata \
+    git unzip \
+    libzip-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
+    libcurl4-openssl-dev \
+    libicu-dev \
+    libssl-dev \
+    pkg-config \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
+    && rm -rf /var/lib/apt/lists/*
+
+# PHP timezone
+RUN echo "date.timezone=${TZ}" > /usr/local/etc/php/conf.d/timezone.ini
+
+# PHP extensions
+RUN docker-php-ext-configure gd \
+    --with-freetype \
+    --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+    mbstring \
+    pdo_mysql \
+    mysqli \
+    zip \
+    exif \
+    pcntl \
+    bcmath \
+    intl \
+    soap \
+    gd
+
+# PECL extensions
+RUN pecl install redis mongodb-1.20.1 \
+    && docker-php-ext-enable redis mongodb \
+    && rm -rf /tmp/pear
+
+# entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
+CMD ["cron", "-f"]
