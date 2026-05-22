@@ -51,7 +51,5 @@ RUN pecl install redis mongodb-1.20.1 \
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-WORKDIR /var/www/html
-
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
 CMD ["cron", "-f"]
