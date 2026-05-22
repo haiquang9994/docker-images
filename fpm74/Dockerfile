@@ -1,14 +1,10 @@
-FROM php:7.4-cli
+FROM php:7.4-fpm
 
 # timezone
 ENV TZ=Asia/Ho_Chi_Minh
 
-# system deps
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    tini \
-    cron \
+RUN apt-get update && apt-get install -y \
     tzdata \
-    git unzip \
     libzip-dev \
     libpng-dev \
     libjpeg-dev \
@@ -21,12 +17,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     && echo $TZ > /etc/timezone \
+    git unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP timezone
 RUN echo "date.timezone=${TZ}" > /usr/local/etc/php/conf.d/timezone.ini
 
-# PHP extensions
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg \
@@ -42,16 +38,9 @@ RUN docker-php-ext-configure gd \
     soap \
     gd
 
-# PECL extensions
 RUN pecl install redis mongodb-1.20.1 \
-    && docker-php-ext-enable redis mongodb \
-    && rm -rf /tmp/pear
+    && docker-php-ext-enable redis mongodb
 
-# entrypoint
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
-
-ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
-CMD ["cron", "-f"]
